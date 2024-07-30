@@ -1,5 +1,6 @@
 var lfm_route = location.origin + location.pathname;
 var show_list;
+var lastSelectedIndex = 1;
 var sort_type = 'alphabetic';
 var multi_selection_enabled = false;
 var selected = [];
@@ -156,16 +157,59 @@ function toggleSelected (e) {
   if (!multi_selection_enabled) {
     selected = [];
   }
-
   var sequence = $(e.target).closest('a').data('id');
   var element_index = selected.indexOf(sequence);
+
+  if ( selected.length == 0 ){
+    lastSelectedIndex = sequence;
+  }
+
   if (element_index === -1) {
     selected.push(sequence);
+    if ( !e.shiftKey || !multi_selection_enabled) {
+      lastSelectedIndex = sequence;
+    }
   } else {
     selected.splice(element_index, 1);
   }
 
+  if (e.shiftKey && multi_selection_enabled) {
+    // if clicked index is greater the last select Index, select every file below it
+    if ( sequence > lastSelectedIndex ) {
+      var index = lastSelectedIndex;
+      while ( index < sequence + 1 ) {
+        var element_index = selected.indexOf(index);
+        if (element_index === -1) {
+          selected.push(index);
+        }
+        index++;
+      }
+      lastSelectedIndex = sequence;
+    }
+    // if current index  is smaller the last select Index, select every file above it
+    else {
+      index = sequence;
+      while ( index < lastSelectedIndex ) {
+        var element_index = selected.indexOf(index);
+        if (element_index === -1) {
+          selected.push(index);
+        }
+        index++;
+      }
+      lastSelectedIndex = sequence;
+    }
+    clearHighlightText()
+  }
   updateSelectedStyle();
+}
+
+function clearHighlightText() {
+  if(document.selection && document.selection.empty) {
+      document.selection.empty();
+  } else if(window.getSelection) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+  }
 }
 
 function clearSelected () {
@@ -479,7 +523,7 @@ function loadItems(page) {
       $('#nav-buttons > ul').removeClass('d-none');
 
       $('#working_dir').val(working_dir);
-      console.log('Current working_dir : ' + working_dir);
+      console.log('Current working_dir: ' + working_dir);
       var breadcrumbs = [];
       var validSegments = working_dir.split('/').filter(function (e) { return e; });
       validSegments.forEach(function (segment, index) {
